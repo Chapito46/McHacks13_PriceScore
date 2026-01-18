@@ -1,4 +1,4 @@
-# PriceScout - Real-Time Price Comparison
+# PriceScore- Real-Time Price Comparison
 
 A modern web application that compares prices across multiple retailers using real-time data scraping via Gumloop API.
 
