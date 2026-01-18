@@ -18,29 +18,44 @@ const ProductCard = ({ product, rank, onBuy }) => {
         return stars;
     };
 
+    // Extract first URL if it's an array
+    const productUrl = Array.isArray(product.url) ? product.url[0] : product.url;
+
+    // Create a normalized product object with single URL
+    const normalizedProduct = {
+        ...product,
+        url: productUrl
+    };
+
+    // Safely parse price
+    const price = parseFloat(product.price) || 0;
+    const originalPrice = product.originalPrice ? parseFloat(product.originalPrice) : null;
+    const rating = parseFloat(product.rating) || 0;
+    const reviews = parseInt(product.reviews) || 0;
+
     const lowestPrice = rank === 1;
 
     return (
-        <div className="product-card" onClick={() => onBuy(product)}>
+        <div className="product-card" onClick={() => onBuy(normalizedProduct)}>
             <div className="rank-badge">#{rank}</div>
 
             <div className="card-header">
                 <div className="retailer-logo">{product.logo}</div>
                 <div className="card-info">
-                    <h3 className="retailer-name">{product.retailer}</h3>
-                    <p className="product-name">{product.productName}</p>
+                    <h3 className="retailer-name">{product.retailer || 'Unknown Retailer'}</h3>
+                    <p className="product-name">{product.name || product.productName || 'Product'}</p>
                 </div>
             </div>
 
             <div className="price-section">
-                <div className="price">${product.price.toFixed(2)}</div>
-                {product.originalPrice && (
+                <div className="price">${price.toFixed(2)}</div>
+                {originalPrice && (
                     <div className="original-price" style={{
                         textDecoration: 'line-through',
                         color: 'var(--text-muted)',
                         fontSize: '0.875rem'
                     }}>
-                        ${product.originalPrice.toFixed(2)}
+                        ${originalPrice.toFixed(2)}
                     </div>
                 )}
                 <div className={`shipping-info ${product.freeShipping ? 'free' : ''}`}>
@@ -49,9 +64,9 @@ const ProductCard = ({ product, rank, onBuy }) => {
             </div>
 
             <div className="rating-section">
-                <div className="stars">{renderStars(product.rating)}</div>
-                <span className="rating-text">{product.rating}</span>
-                <span className="review-count">({product.reviews.toLocaleString()} reviews)</span>
+                <div className="stars">{renderStars(rating)}</div>
+                <span className="rating-text">{rating.toFixed(1)}</span>
+                <span className="review-count">({reviews.toLocaleString()} reviews)</span>
             </div>
 
             <div className="badges">
@@ -62,9 +77,9 @@ const ProductCard = ({ product, rank, onBuy }) => {
 
             <button className="buy-button" onClick={(e) => {
                 e.stopPropagation();
-                onBuy(product);
+                onBuy(normalizedProduct);
             }}>
-                View on {product.retailer}
+                View on {product.retailer || 'Retailer'}
             </button>
         </div>
     );

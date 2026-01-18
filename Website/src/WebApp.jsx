@@ -4,19 +4,6 @@ import { sortResults } from './utils/mockData.js';
 import { callGeminiAPI, pollForResults } from '../../Gemini/GeminiAPI.tsx';
 import './index_website.css';
 
-function findCheapestProduct(products) {
-    if (!products || products.length === 0) return null;
-
-    // Find product with lowest price
-    const cheapest = products.reduce((min, product) => {
-        const currentPrice = parseFloat(product.price) || Infinity;
-        const minPrice = parseFloat(min.price) || Infinity;
-        return currentPrice < minPrice ? product : min;
-    });
-
-    return cheapest;
-}
-
 function WebApp() {
     const [searchQuery, setSearchQuery] = useState('');
     const [results, setResults] = useState([]);
@@ -53,18 +40,71 @@ function WebApp() {
 
                 // Ensure it's an array
                 const productArray = Array.isArray(parsedProducts) ? parsedProducts : [parsedProducts];
-                const normalizedProducts = productArray.map((product, index) => ({
-                    id: product.id || index,
-                    name: product.name || 'Unknown Product',
-                    price: parseFloat(product.price) || 0,
-                    description: product.description || '',
-                    url: product.url || '#',
-                    rating: parseFloat(product.rating) || 0,
-                    reviews: parseInt(product.reviews) || 0,
-                    image: product.image || product.imageUrl || ''
-                }));
 
-                console.log('Normalized products:', normalizedProducts);
+                // Replace the entire normalization section with this:
+                console.log('Raw product array:', productArray);
+
+// Transform the data structure from Gumloop's format
+// Gumloop returns ONE object with arrays for each field
+// We need to convert it to an array of individual product objects
+                let allProducts = [];
+
+                if (productArray.length > 0) {
+                    const gumloopData = productArray[0]; // Get the first (and likely only) object
+                    console.log('Gumloop data structure:', gumloopData);
+
+                    // Check if we have the array-based structure
+                    if (gumloopData.product_name && Array.isArray(gumloopData.product_name)) {
+                        const numProducts = gumloopData.product_name.length;
+
+                        // Create individual product objects from the arrays
+                        for (let i = 0; i < numProducts; i++) {
+                            const productName = gumloopData.product_name[i];
+                            const retailer = gumloopData.retailer[i];
+                            const priceStr = gumloopData.price[i];
+                            const url = gumloopData.url[i];
+
+                            // Skip empty entries
+                            if (!productName || !retailer || !priceStr || !url) {
+                                console.log(`Skipping index ${i} - missing data`);
+                                continue;
+                            }
+
+                            // Parse price
+                            const price = parseFloat(priceStr.replace(/[$,]/g, '')) || 0;
+
+                            if (price <= 0) {
+                                console.log(`Skipping index ${i} - invalid price`);
+                                continue;
+                            }
+
+                            allProducts.push({
+                                id: i,
+                                productName: productName,
+                                retailer: retailer,
+                                price: price,
+                                originalPrice: null,
+                                description: gumloopData.special_offers?.[i] || '',
+                                url: url,
+                                rating: 4.5, // Default since Gumloop doesn't provide this
+                                reviews: 0, // Default since Gumloop doesn't provide this
+                                image: '',
+                                logo: '',
+                                freeShipping: gumloopData.shipping?.[i] === 'free',
+                                verified: true,
+                                fastShipping: false,
+                                availability: gumloopData.availability?.[i] || 'unknown'
+                            });
+                        }
+                    }
+                }
+
+                console.log('Transformed products:', allProducts);
+
+                const normalizedProducts = allProducts;
+
+                console.log('All normalized products:', normalizedProducts);
+
                 const sortedByPrice = normalizedProducts
                     .filter(product => {
                         const price = parseFloat(product.price);
@@ -75,24 +115,16 @@ function WebApp() {
 // Check if we have any valid products
                 if (sortedByPrice.length > 0) {
                     const cheapest = sortedByPrice[0];
+                    console.log('Cheapest product:', cheapest.productName);
+                    console.log('Cheapest retailer:', cheapest.retailer);
                     console.log('Cheapest URL:', cheapest.url);
-                    console.log('Cheapest ID:', cheapest.id);
+                    console.log('Cheapest price:', cheapest.price);
                 } else {
                     console.log('No products with valid prices found');
                 }
 
-                const cheapest_thing = sortedByPrice[0];
-                console.log('Cheapest URL:', cheapest_thing.url);
-                console.log('Cheapest ID:', cheapest_thing.id);
-                const cheapest = findCheapestProduct(normalizedProducts);
-                if (cheapest) {
-                    console.log('Cheapest product:', cheapest.name);
-                    console.log('Price:', cheapest.price);
-                    console.log('ID:', cheapest.id);
-                    console.log('URL:', cheapest.url);c
-                }
-                const cheapestUrl = Array.isArray(cheapest.url) ? cheapest.url[0] : cheapest.url;
                 setResults(normalizedProducts);
+
 
             } catch (err) {
                 console.error('Search error:', err);
@@ -119,8 +151,13 @@ function WebApp() {
     };
 
     const handleBuy = (product) => {
-        // Open the retailer's website in a new tab
-        window.open(product.url, '_blank', 'noopener,noreferrer');
+        console.log('Opening URL:', product.url);
+        // URL is already extracted to first element in normalization
+        if (product.url && product.url !== '#') {
+            window.open(product.url, '_blank', 'noopener,noreferrer');
+        } else {
+            console.error('Invalid URL:', product.url);
+        }
     };
 
     // Sort results before displaying

@@ -5,20 +5,27 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: #1a1e27;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   color: #e2e8f0;
-  overflow: hidden;
+  overflow-y: auto; /* Add this */
 }
 
 #root {
   width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  min-height: 100vh; /* Change from height: 100% */
+  overflow-y: auto; /* Add this */
 }
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Change from center */
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
 
 .app-container {
   display: flex;

@@ -20,8 +20,8 @@ export const callGeminiAPI = async (contents: string): Promise<string> => {
 
         const result = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: "You are a online shopping tool. Your task is to find the best corresponding product to the client description. To do this, you will listen to the customer prompt and suggest three different product that matches its description.Return ONLY valid JSON array like this:\n" +
-                "        [{\"name\": \"Product Name\", \"product_number\": \"Product Number\", \"description\": \"desc\", \"price\": 29.99}]` The short description should include cons and pros. Give also the current price and the url to the item. Here is the client request : " + contents,
+            contents: "You are a online shopping tool. Your task is to find the best corresponding product to the client description. To do this, you will listen to the customer prompt and suggest the best product that matches its description.Return ONLY valid JSON array like this:\n" +
+                "        [{\"name\": \"Product Name\", \"product_number\": \"Product Number\"}]` . Here is the client request : " + contents,
         });
         const responseText = result.text || 'No response received';
         const data = await sendToGumloop(responseText, contents) || "No Id";
