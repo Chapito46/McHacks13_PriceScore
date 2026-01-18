@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import ProductCard from './components/ProductCard';
 import { searchProducts, sortResults } from './utils/mockData.js';
-import { callGeminiAPI } from '../../Gemini/GeminiAPI.tsx';
+import { callGeminiAPI, pollForResults, getGumloopResults } from '../../Gemini/GeminiAPI.tsx';
 import './index_website.css';
+function cleanJsonResponse(text) {
+    // Remove markdown code blocks
+    let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
+    // Trim whitespace
+    cleaned = cleaned.trim();
+
+    return cleaned;
+}
 function WebApp() {
+    const [geminiData, setGeminiData] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [results, setResults] = useState([]);
     const [sortBy, setSortBy] = useState('price-low');
@@ -21,13 +30,32 @@ function WebApp() {
             setIsSearched(true);
 
             try {
-                const geminiResponse = await callGeminiAPI(searchQuery);
-                console.log('Gemini response:', geminiResponse);
+                const gumloop_id = await callGeminiAPI(searchQuery);
+                const runId = await getGumloopResults(gumloop_id);
+                console.log('Pipeline run ID:', runId);
+                const gumloopOutputs = await pollForResults(runId.run_id);
+                const products = gumloopOutputs.products || gumloopOutputs.results || [];
 
+                // If output is a string, parse it
+                let parsedProducts = products;
+                if (typeof products === 'string') {
+                    try {
+                        parsedProducts = JSON.parse(products);
+                    } catch (parseErr) {
+                        console.error('Failed to parse products:', parseErr);
+                        parsedProducts = [];
+                    }
+                }
+
+                // Ensure it's an array
+                const productArray = Array.isArray(parsedProducts) ? parsedProducts : [parsedProducts];
+
+                console.log('Parsed products:', productArray);
+                setResults(productArray);
                 // Process gemini response and get results
-                const fetchedResults = await searchProducts(searchQuery);
-                const sortedResults = sortResults(fetchedResults, sortBy);
-                setResults(sortedResults);
+                // const fetchedResults = await searchProducts(searchQuery);
+                // const sortedResults = sortResults(fetchedResults, sortBy);
+                // setResults(sortedResults);
             } catch (err) {
                 setError('Failed to fetch results. Please try again.');
                 setResults([]);
@@ -56,7 +84,7 @@ function WebApp() {
         window.open(product.url, '_blank', 'noopener,noreferrer');
     };
 
-    const displayResults = sortResults(results, sortBy);
+    const displayResults = sortResults(gumloopOutputs, sortBy);
 
     return (
         <div className="app">
