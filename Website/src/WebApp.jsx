@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import ProductCard from './components/ProductCard';
-import { searchProducts, sortResults } from './utils/mockData.js';
-import { callGeminiAPI, pollForResults, getGumloopResults } from '../../Gemini/GeminiAPI.tsx';
+import { sortResults } from './utils/mockData.js';
+import { callGeminiAPI, pollForResults } from '../../Gemini/GeminiAPI.tsx';
 import './index_website.css';
-function cleanJsonResponse(text) {
-    // Remove markdown code blocks
-    let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
-    // Trim whitespace
-    cleaned = cleaned.trim();
+function findCheapestProduct(products) {
+    if (!products || products.length === 0) return null;
 
-    return cleaned;
+    // Find product with lowest price
+    const cheapest = products.reduce((min, product) => {
+        const currentPrice = parseFloat(product.price) || Infinity;
+        const minPrice = parseFloat(min.price) || Infinity;
+        return currentPrice < minPrice ? product : min;
+    });
+
+    return cheapest;
 }
+
 function WebApp() {
-    const [geminiData, setGeminiData] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [results, setResults] = useState([]);
     const [sortBy, setSortBy] = useState('price-low');
@@ -22,25 +26,25 @@ function WebApp() {
     const [error, setError] = useState(null);
 
     const handleSearch = async () => {
-        // Add look for authentificaiton
-
         if (searchQuery.trim()) {
             setIsLoading(true);
             setError(null);
             setIsSearched(true);
 
             try {
-                const gumloop_id = await callGeminiAPI(searchQuery);
-                const runId = await getGumloopResults(gumloop_id);
+                // Get run ID from Gemini/Gumloop
+                const runId = await callGeminiAPI(searchQuery);
                 console.log('Pipeline run ID:', runId);
-                const gumloopOutputs = await pollForResults(runId.run_id);
-                const products = gumloopOutputs.products || gumloopOutputs.results || [];
+
+                // Poll for results
+                const gumloopOutputs = await pollForResults(runId);
+                console.log('Gumloop outputs:', gumloopOutputs);
 
                 // If output is a string, parse it
-                let parsedProducts = products;
-                if (typeof products === 'string') {
+                let parsedProducts = gumloopOutputs;
+                if (typeof gumloopOutputs === 'string') {
                     try {
-                        parsedProducts = JSON.parse(products);
+                        parsedProducts = JSON.parse(gumloopOutputs);
                     } catch (parseErr) {
                         console.error('Failed to parse products:', parseErr);
                         parsedProducts = [];
@@ -49,14 +53,49 @@ function WebApp() {
 
                 // Ensure it's an array
                 const productArray = Array.isArray(parsedProducts) ? parsedProducts : [parsedProducts];
+                const normalizedProducts = productArray.map((product, index) => ({
+                    id: product.id || index,
+                    name: product.name || 'Unknown Product',
+                    price: parseFloat(product.price) || 0,
+                    description: product.description || '',
+                    url: product.url || '#',
+                    rating: parseFloat(product.rating) || 0,
+                    reviews: parseInt(product.reviews) || 0,
+                    image: product.image || product.imageUrl || ''
+                }));
 
-                console.log('Parsed products:', productArray);
-                setResults(productArray);
-                // Process gemini response and get results
-                // const fetchedResults = await searchProducts(searchQuery);
-                // const sortedResults = sortResults(fetchedResults, sortBy);
-                // setResults(sortedResults);
+                console.log('Normalized products:', normalizedProducts);
+                const sortedByPrice = normalizedProducts
+                    .filter(product => {
+                        const price = parseFloat(product.price);
+                        return !isNaN(price) && price > 0;
+                    })
+                    .sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+// Check if we have any valid products
+                if (sortedByPrice.length > 0) {
+                    const cheapest = sortedByPrice[0];
+                    console.log('Cheapest URL:', cheapest.url);
+                    console.log('Cheapest ID:', cheapest.id);
+                } else {
+                    console.log('No products with valid prices found');
+                }
+
+                const cheapest_thing = sortedByPrice[0];
+                console.log('Cheapest URL:', cheapest_thing.url);
+                console.log('Cheapest ID:', cheapest_thing.id);
+                const cheapest = findCheapestProduct(normalizedProducts);
+                if (cheapest) {
+                    console.log('Cheapest product:', cheapest.name);
+                    console.log('Price:', cheapest.price);
+                    console.log('ID:', cheapest.id);
+                    console.log('URL:', cheapest.url);c
+                }
+                const cheapestUrl = Array.isArray(cheapest.url) ? cheapest.url[0] : cheapest.url;
+                setResults(normalizedProducts);
+
             } catch (err) {
+                console.error('Search error:', err);
                 setError('Failed to fetch results. Please try again.');
                 setResults([]);
             } finally {
@@ -84,7 +123,8 @@ function WebApp() {
         window.open(product.url, '_blank', 'noopener,noreferrer');
     };
 
-    const displayResults = sortResults(gumloopOutputs, sortBy);
+    // Sort results before displaying
+    const displayResults = results.length > 0 ? sortResults(results, sortBy) : [];
 
     return (
         <div className="app">
@@ -105,7 +145,7 @@ function WebApp() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyPress={handleKeyPress}
                     />
-                    <button className="search-button" onClick={() => handleSearch()}>
+                    <button className="search-button" onClick={handleSearch}>
                         Search
                     </button>
                 </div>
@@ -166,7 +206,7 @@ function WebApp() {
                     <div className="results-grid">
                         {displayResults.map((product, index) => (
                             <ProductCard
-                                key={product.id}
+                                key={product.id || index}
                                 product={product}
                                 rank={index + 1}
                                 onBuy={handleBuy}
