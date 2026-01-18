@@ -44,7 +44,7 @@ function App() {
                         e.currentTarget.style.display = 'none';
                     }}
                 />
-                <h1 className="main-title">Welcome to PriceScrapper</h1>
+                <h1 className="main-title">Welcome to Price Score</h1>
 
                 {isAuthenticated ? (
                     <div className="logged-in-section">
