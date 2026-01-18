@@ -25,10 +25,6 @@ export const sortResults = (results, sortBy) => {
             return sorted.sort((a, b) => a.price - b.price);
         case 'price-high':
             return sorted.sort((a, b) => b.price - b.price);
-        case 'rating':
-            return sorted.sort((a, b) => b.rating - a.rating);
-        case 'reviews':
-            return sorted.sort((a, b) => b.reviews - a.reviews);
         default:
             return sorted;
     }

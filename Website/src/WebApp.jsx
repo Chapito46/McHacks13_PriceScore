@@ -86,8 +86,6 @@ function WebApp() {
                                 originalPrice: null,
                                 description: gumloopData.special_offers?.[i] || '',
                                 url: url,
-                                rating: 4.5, // Default since Gumloop doesn't provide this
-                                reviews: 0, // Default since Gumloop doesn't provide this
                                 image: '',
                                 logo: '',
                                 freeShipping: gumloopData.shipping?.[i] === 'free',
@@ -224,18 +222,6 @@ function WebApp() {
                                 onClick={() => handleSort('price-high')}
                             >
                                 Price: High to Low
-                            </button>
-                            <button
-                                className={`sort-button ${sortBy === 'rating' ? 'active' : ''}`}
-                                onClick={() => handleSort('rating')}
-                            >
-                                Highest Rated
-                            </button>
-                            <button
-                                className={`sort-button ${sortBy === 'reviews' ? 'active' : ''}`}
-                                onClick={() => handleSort('reviews')}
-                            >
-                                Most Reviews
                             </button>
                         </div>
                     </div>
